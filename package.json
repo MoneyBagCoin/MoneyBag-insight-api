@@ -57,7 +57,7 @@
     "base58-native": "0.1.2",
     "bignum": "*",
     "morgan": "*",
-    "creditbitcore": "git://github.com/creditbit/creditbitcore.git",
+    "bitcore": "git://github.com/creditbit/creditbitcore.git",
     "bufferput": "git://github.com/bitpay/node-bufferput.git",
     "buffertools": "*",
     "commander": "^2.3.0",

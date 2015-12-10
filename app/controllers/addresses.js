@@ -9,9 +9,6 @@ var Address = require('../models/Address');
 var common = require('./common');
 var async = require('async');
 
-var MAX_BATCH_SIZE = 100;
-var RPC_CONCURRENCY = 5;
-
 var tDb = require('../../lib/TransactionDb').default();
 
 var checkSync = function(req, res) {
@@ -53,7 +50,7 @@ var getAddrs = function(req, res, next) {
     }
   } catch (e) {
     common.handleErrors({
-      message: 'Invalid addrs param:' + e.message,
+      message: 'Invalid address:' + e.message,
       code: 1
     }, res, next);
     return null;
@@ -104,7 +101,7 @@ exports.multiutxo = function(req, res, next) {
   var as = getAddrs(req, res, next);
   if (as) {
     var utxos = [];
-    async.eachLimit(as, RPC_CONCURRENCY, function(a, callback) {
+    async.each(as, function(a, callback) {
       a.update(function(err) {
         if (err) callback(err);
         utxos = utxos.concat(a.unspent);
@@ -126,72 +123,42 @@ exports.multitxs = function(req, res, next) {
   function processTxs(txs, from, to, cb) {
     txs = _.uniq(_.flatten(txs), 'txid');
     var nbTxs = txs.length;
+    var paginated = !_.isUndefined(from) || !_.isUndefined(to);
 
-    if (_.isUndefined(from) && _.isUndefined(to)) {
-      from = 0;
-      to = MAX_BATCH_SIZE;
+    if (paginated) {
+      txs.sort(function(a, b) {
+        return (b.ts || b.ts) - (a.ts || a.ts);
+      });
+      var start = Math.max(from || 0, 0);
+      var end = Math.min(to || txs.length, txs.length);
+      txs = txs.slice(start, end);
     }
-    if (!_.isUndefined(from) && _.isUndefined(to))
-      to = from + MAX_BATCH_SIZE;
-
-    if (!_.isUndefined(from) && !_.isUndefined(to) && to - from > MAX_BATCH_SIZE)
-      to = from + MAX_BATCH_SIZE;
-
-    if (from < 0) from = 0;
-    if (to < 0) to = 0;
-    if (from > nbTxs) from = nbTxs;
-    if (to > nbTxs) to = nbTxs;
-
-    txs.sort(function(a, b) {
-      var b = (b.firstSeenTs || b.ts)+ b.txid;
-      var a = (a.firstSeenTs || a.ts)+ a.txid;
-      if (a > b) return -1;
-      if (a < b) return 1;
-      return 0;
-    });
-    txs = txs.slice(from, to);
 
     var txIndex = {};
     _.each(txs, function(tx) {
       txIndex[tx.txid] = tx;
     });
 
-    async.eachLimit(txs, RPC_CONCURRENCY, function(tx2, callback) {
-      tDb.fromIdWithInfo(tx2.txid, function(err, tx) {
-        if (err) {
-          console.log(err);
-          return common.handleErrors(err, res);
-        }
+    async.each(txs, function(tx, callback) {
+      tDb.fromIdWithInfo(tx.txid, function(err, tx) {
+        if (err) console.log(err);
         if (tx && tx.info) {
-
-          if (tx2.firstSeenTs)
-            tx.info.firstSeenTs = tx2.firstSeenTs;
-
           txIndex[tx.txid].info = tx.info;
-        } else {
-          // TX no longer available
-          txIndex[tx2.txid].info = {
-            txid: tx2.txid,
-            possibleDoubleSpend: true,
-            firstSeenTs: tx2.firstSeenTs,
-          };
         }
-
         callback();
       });
     }, function(err) {
       if (err) return cb(err);
 
-      // It could be that a txid is stored at an address but it is
-      // no longer at bitcoind (for example a double spend)
-
-      var transactions = _.compact(_.pluck(txs, 'info'));
-      transactions = {
-        totalItems: nbTxs,
-        from: +from,
-        to: +to,
-        items: transactions,
-      };
+      var transactions = _.pluck(txs, 'info');
+      if (paginated) {
+        transactions = {
+          totalItems: nbTxs,
+          from: +from,
+          to: +to,
+          items: transactions,
+        };
+      }
       return cb(null, transactions);
     });
   };
@@ -202,19 +169,17 @@ exports.multitxs = function(req, res, next) {
   var as = getAddrs(req, res, next);
   if (as) {
     var txs = [];
-    async.eachLimit(as, RPC_CONCURRENCY, function(a, callback) {
+    async.eachLimit(as, 10, function(a, callback) {
       a.update(function(err) {
         if (err) callback(err);
-
         txs.push(a.transactions);
         callback();
       }, {
         ignoreCache: req.param('noCache'),
-        includeTxInfo: true,
+        includeTxInfo: true
       });
     }, function(err) { // finished callback
       if (err) return common.handleErrors(err, res);
-
       processTxs(txs, from, to, function(err, transactions) {
         if (err) return common.handleErrors(err, res);
         res.jsonp(transactions);

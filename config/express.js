@@ -28,8 +28,7 @@ module.exports = function(app, historicSync, peerSync) {
   app.enable('jsonp callback');
   app.use(config.apiPrefix, setHistoric);
   app.use(config.apiPrefix, setPeer);
-  app.use(require('morgan')(':remote-addr :date[iso] ":method :url" :status :res[content-length] :response-time ":user-agent" '));
-  
+  app.use(express.logger('dev'));
   app.use(express.json());
   app.use(express.urlencoded());
   app.use(express.methodOverride());

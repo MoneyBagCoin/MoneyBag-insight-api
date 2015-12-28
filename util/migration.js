@@ -1,10 +1,10 @@
 var levelup = require('levelup');
-var bitcore = require('bitcore');
+var bitcore = require('creditbitcore');
 var _ = require('lodash');
 
 var home = process.env['HOME'];
-var db = new levelup(process.argv[2] || (home + '/.insight/testnet/emailstore'));
-var newDb = new levelup(process.argv[3] || (home + '/.insight/testnet/emailstore.migrated'));
+var db = new levelup(process.argv[2] || (home + '/.creditbitsight/testnet/emailstore'));
+var newDb = new levelup(process.argv[3] || (home + '/.creditbitsight/testnet/emailstore.migrated'));
 
 var transformStoredValue = function(key) {
   var oldKey = key.substr('credentials-store-'.length);

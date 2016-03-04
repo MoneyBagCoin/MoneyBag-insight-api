@@ -24,13 +24,13 @@ var home = process.env.INSIGHT_DB || (getUserHome() + '/.creditbitsight');
 if (process.env.INSIGHT_NETWORK === 'livenet') {
   env = 'livenet';
   db = home;
-  port = '3000';
+  port = '3030';
   b_port = '5555';
   p2p_port = '5556';
 } else {
   env = 'testnet';
   db = home + '/testnet';
-  port = '3001';
+  port = '3031';
   b_port = '15555';
   p2p_port = '15556';
 }
@@ -69,8 +69,8 @@ var ignoreCache = process.env.INSIGHT_IGNORE_CACHE || 0;
 
 var bitcoindConf = {
   protocol: process.env.BITCOIND_PROTO || 'http',
-  user: process.env.BITCOIND_USER || 'user',
-  pass: process.env.BITCOIND_PASS || 'pass',
+  user: process.env.BITCOIND_USER || 'rpcuser',
+  pass: process.env.BITCOIND_PASS || 'rpcpasswor',
   host: process.env.BITCOIND_HOST || '127.0.0.1',
   port: process.env.BITCOIND_PORT || b_port,
   p2pPort: process.env.BITCOIND_P2P_PORT || p2p_port,

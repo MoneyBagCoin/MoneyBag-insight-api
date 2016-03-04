@@ -27,6 +27,9 @@ exports.show = function(req, res) {
     case 'getDifficulty':
       statusObject.getDifficulty(returnJsonp);
       break;
+	case 'getMoneySupply':
+      statusObject.getMoneySupply(returnJsonp);
+      break;  
     case 'getTxOutSetInfo':
       statusObject.getTxOutSetInfo(returnJsonp);
       break;
